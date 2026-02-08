@@ -18,21 +18,20 @@ SPDX-License-Identifier: MIT
 ## Pipeline Flow
 
 ```mermaid
-%%{init: {'themeVariables': {'fontSize': '10px'}, 'flowchart': {'nodeSpacing': 30, 'rankSpacing': 36}} }%%
 flowchart TD
-  A[NBA<br/>page] --> B[Latest<br/>PDF]
-  B --> C[Get<br/>PDF]
-  C --> D[Parse<br/>rows]
-  D --> E[Clean<br/>rows]
-  E --> F[CSV<br/>file]
-  E --> G[Dash<br/>data]
-  G --> H[Dash<br/>UI]
+  A[official.nba.com injury report page] --> B[Find latest Injury-Report_*.pdf link]
+  B --> C[Download PDF]
+  C --> D[Extract rows from text/tables/columns]
+  D --> E[Normalize + deduplicate rows]
+  E --> F[Write CSV to data/]
+  E --> G[Build dashboard payload]
+  G --> H[Dash UI: status cards + live table]
 
-  I[Asset<br/>sync] --> J[Team<br/>logos]
-  I --> K[Player<br/>heads]
+  I[scripts/assets/sync_nba_assets.py] --> J[Team logos -> assets/team_logos/]
+  I --> K[Player headshots + map -> assets/player_headshots/]
 
-  F --> L[CSV<br/>check]
-  L --> M[OK<br/>Fail]
+  F --> L[validate_injury_report_csv.py]
+  L --> M[PASS/FAIL quality checks]
 ```
 
 ## Project layout
