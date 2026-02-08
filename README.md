@@ -19,19 +19,19 @@ SPDX-License-Identifier: MIT
 
 ```mermaid
 flowchart TD
-  A[NBA page] --> B[Find latest PDF]
-  B --> C[Download PDF]
-  C --> D[Extract rows]
-  D --> E[Clean and dedupe]
-  E --> F[Write CSV]
-  E --> G[Build payload]
-  G --> H[Dash UI]
+  A[NBA<br/>page] --> B[Latest<br/>PDF]
+  B --> C[Get<br/>PDF]
+  C --> D[Parse<br/>rows]
+  D --> E[Clean<br/>rows]
+  E --> F[CSV<br/>file]
+  E --> G[Dash<br/>data]
+  G --> H[Dash<br/>UI]
 
-  I[sync_nba_assets.py] --> J[Team logos]
-  I --> K[Player headshots + map]
+  I[Asset<br/>sync] --> J[Team<br/>logos]
+  I --> K[Player<br/>heads]
 
-  F --> L[CSV validator]
-  L --> M[Pass or fail]
+  F --> L[CSV<br/>check]
+  L --> M[OK<br/>Fail]
 ```
 
 ## Project layout
