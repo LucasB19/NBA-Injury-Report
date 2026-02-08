@@ -19,19 +19,19 @@ SPDX-License-Identifier: MIT
 
 ```mermaid
 flowchart TD
-  A[official.nba.com injury report page] --> B[Find latest Injury-Report_*.pdf link]
+  A[NBA page] --> B[Find latest PDF]
   B --> C[Download PDF]
-  C --> D[Extract rows from text/tables/columns]
-  D --> E[Normalize + deduplicate rows]
-  E --> F[Write CSV to data/]
-  E --> G[Build dashboard payload]
-  G --> H[Dash UI: status cards + live table]
+  C --> D[Extract rows]
+  D --> E[Clean and dedupe]
+  E --> F[Write CSV]
+  E --> G[Build payload]
+  G --> H[Dash UI]
 
-  I[scripts/assets/sync_nba_assets.py] --> J[Team logos -> assets/team_logos/]
-  I --> K[Player headshots + map -> assets/player_headshots/]
+  I[sync_nba_assets.py] --> J[Team logos]
+  I --> K[Player headshots + map]
 
-  F --> L[validate_injury_report_csv.py]
-  L --> M[PASS/FAIL quality checks]
+  F --> L[CSV validator]
+  L --> M[Pass or fail]
 ```
 
 ## Project layout
