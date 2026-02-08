@@ -136,6 +136,59 @@ h1 {
   font-size: 20px;
 }
 
+.filter-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.filter-input {
+  width: 100%;
+  height: 40px;
+  border: 1px solid var(--stroke);
+  border-radius: 10px;
+  padding: 0 12px;
+  font-size: 14px;
+  color: var(--ink);
+  background: #fff;
+}
+
+.filter-input:focus {
+  outline: 2px solid rgba(207, 90, 41, 0.24);
+  border-color: var(--accent);
+}
+
+.filter-dropdown .Select-control,
+.filter-dropdown .Select__control {
+  min-height: 40px;
+  border-radius: 10px;
+  border-color: var(--stroke);
+}
+
+.dropdown-team-option,
+.dropdown-status-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dropdown-team-logo {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+  flex: 0 0 auto;
+}
+
+.dropdown-team-name,
+.dropdown-status-name {
+  line-height: 1;
+}
+
+.dropdown-status-dot {
+  font-size: 16px;
+  line-height: 1;
+}
+
 .status-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
@@ -281,10 +334,12 @@ h1 {
 
 .table-row {
   display: grid;
-  grid-template-columns: 0.9fr 0.8fr 0.95fr 1fr 0.75fr 1.4fr;
+  grid-template-columns: 0.9fr 0.9fr 1fr 1fr 0.85fr 1.8fr;
   gap: 16px;
   font-size: 14px;
   padding: 12px 0;
+  align-items: center;
+  min-height: 52px;
   border-bottom: 1px solid rgba(215, 199, 178, 0.5);
 }
 
@@ -300,11 +355,25 @@ h1 {
   border-bottom: 1px solid var(--stroke);
 }
 
+.table-row:not(.table-head) > span {
+  min-width: 0;
+}
+
+.cell-game-time,
+.cell-matchup,
+.cell-reason {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .team-cell {
   display: inline-flex;
   align-items: center;
   gap: 8px;
   min-width: 0;
+  overflow: hidden;
 }
 
 .team-logo {
@@ -315,6 +384,7 @@ h1 {
 }
 
 .team-name {
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
@@ -324,6 +394,7 @@ h1 {
   align-items: center;
   gap: 8px;
   min-width: 0;
+  overflow: hidden;
 }
 
 .player-headshot {
@@ -337,6 +408,7 @@ h1 {
 }
 
 .player-name {
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }

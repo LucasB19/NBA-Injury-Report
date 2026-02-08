@@ -37,6 +37,7 @@ logging.basicConfig(
 )
 
 STATUS_ORDER = ["Out", "Doubtful", "Questionable", "Probable", "Available", "Not With Team"]
+STATUS_DISPLAY_ORDER = ["Available", "Probable", "Questionable", "Doubtful", "Not With Team", "Out"]
 STATUS_TOKENS = ["Not With Team", "Questionable", "Doubtful", "Probable", "Available", "Out"]
 CACHE_TTL_SECONDS = 3600
 TEAM_LOGO_CODE_BY_NAME = {
@@ -74,7 +75,6 @@ TEAM_LOGO_CODE_BY_NAME = {
 }
 
 CACHE_LOCK = threading.Lock()
-REFRESH_LOCK = threading.Lock()
 CACHE_STATE = {
     "data": None,
     "last_updated": 0
@@ -111,20 +111,18 @@ def load_player_name_map(path: str) -> dict[str, str]:
     if isinstance(value, int):
       loaded[normalized] = f"{value}.png"
       continue
-    if isinstance(value, str) and value.endswith(".png"):
-      loaded[normalized] = os.path.basename(value)
+    if isinstance(value, str):
+      if value.endswith(".png"):
+        loaded[normalized] = os.path.basename(value)
+      elif value.isdigit():
+        loaded[normalized] = f"{value}.png"
   return loaded
 
 
 def available_headshot_files(headshot_dir: str) -> set[str]:
   if not os.path.isdir(headshot_dir):
     return set()
-  result = set()
-  for name in os.listdir(headshot_dir):
-    if not name.endswith(".png"):
-      continue
-    result.add(name)
-  return result
+  return {name for name in os.listdir(headshot_dir) if name.endswith(".png")}
 
 
 PLAYER_HEADSHOT_FILE_BY_NAME_KEY = load_player_name_map(PLAYER_NAME_MAP_PATH)
@@ -209,27 +207,31 @@ def fetch_pdf_with_retry(
   raise last_error
 
 
-def parse_pdf_datetime(url: str) -> int:
+def parse_pdf_time_parts(url: str) -> tuple[str, int, int, str] | None:
   file_name = url.split("/")[-1]
   match = re.search(r"Injury-Report_(\d{4}-\d{2}-\d{2})_([0-9_:\-]{1,8})(AM|PM)", file_name, re.I)
   if not match:
-    return 0
-  date_str, raw_time_str, meridiem = match.group(1), match.group(2), match.group(3)
+    return None
+  date_str, raw_time_str, meridiem = match.group(1), match.group(2), match.group(3).upper()
   digits = re.sub(r"\D", "", raw_time_str)
   if not digits:
-    return 0
+    return None
   if len(digits) <= 2:
     hour = int(digits)
     minutes = 0
-  elif len(digits) == 3:
-    hour = int(digits[0])
-    minutes = int(digits[1:])
   else:
     hour = int(digits[:-2])
     minutes = int(digits[-2:])
   if hour < 1 or hour > 12 or minutes < 0 or minutes > 59:
+    return None
+  return date_str, hour, minutes, meridiem
+
+
+def parse_pdf_datetime(url: str) -> int:
+  parts = parse_pdf_time_parts(url)
+  if not parts:
     return 0
-  meridiem = meridiem.upper()
+  date_str, hour, minutes, meridiem = parts
   if meridiem == "PM" and hour < 12:
     hour += 12
   if meridiem == "AM" and hour == 12:
@@ -238,6 +240,14 @@ def parse_pdf_datetime(url: str) -> int:
     return int(datetime.strptime(f"{date_str}T{hour:02d}:{minutes:02d}:00", "%Y-%m-%dT%H:%M:%S").timestamp())
   except ValueError:
     return 0
+
+
+def parse_pdf_time_label(url: str) -> str:
+  parts = parse_pdf_time_parts(url)
+  if not parts:
+    return ""
+  _, hour, minutes, meridiem = parts
+  return f"{hour:02d}:{minutes:02d} {meridiem} ET"
 
 
 def parse_pdf_date(url: str) -> str:
@@ -265,15 +275,20 @@ def extract_pdf_links(html_text: str) -> list[str]:
 def prefer_link(links: list[str]) -> str | None:
   if not links:
     return None
-  parsed = [(link, parse_pdf_datetime(link)) for link in links]
-  valid = [item for item in parsed if item[1] > 0]
-  source = valid if valid else parsed
   ranked = sorted(
-      source,
-      key=lambda item: (item[1], "ak-static.cms.nba.com" in item[0], item[0]),
+      links,
+      key=lambda link: (parse_pdf_datetime(link), "ak-static.cms.nba.com" in link),
       reverse=True
   )
-  return ranked[0][0]
+  return ranked[0]
+
+
+def fetch_latest_pdf_link(session: requests.Session | None = None) -> str | None:
+  html_response = fetch_with_retry(OFFICIAL_PAGE, timeout=12, retries=3, session=session)
+  links = extract_pdf_links(html_response.text)
+  if not links:
+    return None
+  return prefer_link(links)
 
 
 def fallback_pdf_url(url: str) -> str | None:
@@ -370,7 +385,9 @@ def normalize_rows(rows: list[Row], game_date: str) -> list[Row]:
   normalized = []
   last_team = None
   last_game_time = None
+  last_real_game_time = None
   last_matchup = None
+  game_time_by_matchup: dict[str, str] = {}
 
   status_pattern = re.compile(r"\b(" + "|".join([re.escape(token) for token in STATUS_TOKENS]) + r")\b", re.I)
   reason_pattern = re.compile(
@@ -388,7 +405,6 @@ def normalize_rows(rows: list[Row], game_date: str) -> list[Row]:
   carryover_team_by_page = {}
   pending_reason_by_page = {}
   pending_team_by_page = {}
-  matchup_to_game_time: dict[str, str] = {}
 
   def starts_with_reason_prefix(text):
     if not text:
@@ -441,31 +457,6 @@ def normalize_rows(rows: list[Row], game_date: str) -> list[Row]:
 
   def normalize_spaces(text):
     return re.sub(r"\s+", " ", (text or "").replace("\u00a0", " ")).strip()
-
-  def normalize_game_time(value):
-    compact = normalize_spaces(value)
-    if not compact:
-      return ""
-    return re.sub(r"(\d{1,2}:\d{2})\s*\((ET)\)", r"\1 (\2)", compact, flags=re.I)
-
-  def is_unknown_game_time(value):
-    compact = normalize_spaces(value).upper()
-    return not compact or compact == "TBD" or compact == nys_marker
-
-  def normalize_matchup(value):
-    compact = normalize_spaces(value).upper()
-    if not compact:
-      return ""
-    return re.sub(r"\s*@\s*", "@", compact)
-
-  def split_game_cell(value):
-    compact = normalize_spaces(value)
-    if not compact:
-      return "", ""
-    match = re.match(r"^(\d{1,2}:\d{2}\s*(?:\([A-Z]{2,3}\))?)\s+([A-Z]{2,4}\s*@\s*[A-Z]{2,4})$", compact, re.I)
-    if not match:
-      return "", ""
-    return normalize_game_time(match.group(1)), normalize_matchup(match.group(2))
 
   def looks_like_player_blob(text):
     compact = normalize_spaces(text)
@@ -550,10 +541,21 @@ def normalize_rows(rows: list[Row], game_date: str) -> list[Row]:
     nys_marker = "NOT YET SUBMITTED"
     if player.strip().upper() == nys_marker or status.strip().upper() == nys_marker:
       team_value = row.get("team", "").strip() or last_team or ""
+      nys_matchup = (row.get("matchup", "") or "").strip() or last_matchup or ""
+      matchup_key = nys_matchup.upper()
+      resolved_time = (row.get("gameTime", "") or "").strip()
+      if not resolved_time or resolved_time.upper() == "TBD":
+        resolved_time = game_time_by_matchup.get(matchup_key, "") if matchup_key else ""
+      if not resolved_time or resolved_time.upper() == "TBD":
+        resolved_time = last_real_game_time or last_game_time or "TBD"
+      if resolved_time and resolved_time.upper() != "TBD":
+        if matchup_key:
+          game_time_by_matchup[matchup_key] = resolved_time
+        last_real_game_time = resolved_time
       if team_value and team_value.upper() != nys_marker:
         normalized.append({
-            "gameTime": row.get("gameTime", "") or last_game_time or "TBD",
-            "matchup": row.get("matchup", "") or last_matchup or "",
+            "gameTime": resolved_time,
+            "matchup": nys_matchup,
             "team": team_value,
             "player": nys_marker,
             "status": nys_marker,
@@ -611,37 +613,30 @@ def normalize_rows(rows: list[Row], game_date: str) -> list[Row]:
       if team_value and team_value.upper() != nys_marker:
         last_team = team_value
 
-    cell_game_time = normalize_game_time(row.get("gameTime", ""))
-    cell_matchup = normalize_matchup(row.get("matchup", ""))
-    if not cell_matchup:
-      inferred_time, inferred_matchup = split_game_cell(row.get("gameTime", ""))
-      if inferred_matchup:
-        cell_matchup = inferred_matchup
-        if inferred_time:
-          cell_game_time = inferred_time
-
-    raw_matchup = cell_matchup
-    if not raw_matchup:
-      matchup_value = last_matchup or ""
+    if not row.get("matchup") or row.get("matchup").strip() == "":
+      row["matchup"] = last_matchup or ""
     else:
-      matchup_value = raw_matchup
-      if matchup_value.upper() != nys_marker:
+      matchup_value = row.get("matchup").strip()
+      if matchup_value and matchup_value.upper() != nys_marker:
         last_matchup = matchup_value
-    row["matchup"] = matchup_value
+    matchup_key = (row.get("matchup") or "").strip().upper()
 
-    raw_time_value = cell_game_time
-    if is_unknown_game_time(raw_time_value):
-      if matchup_value and matchup_to_game_time.get(matchup_value):
-        row["gameTime"] = matchup_to_game_time[matchup_value]
-      elif not matchup_value and last_game_time:
-        row["gameTime"] = last_game_time
-      else:
-        row["gameTime"] = "TBD"
+    time_value = (row.get("gameTime") or "").strip()
+    if time_value and time_value.upper() not in {"TBD", nys_marker}:
+      row["gameTime"] = time_value
+      last_game_time = time_value
+      last_real_game_time = time_value
+      if matchup_key:
+        game_time_by_matchup[matchup_key] = time_value
     else:
-      row["gameTime"] = raw_time_value
-      last_game_time = raw_time_value
-      if matchup_value:
-        matchup_to_game_time[matchup_value] = raw_time_value
+      inferred_time = ""
+      if matchup_key:
+        inferred_time = game_time_by_matchup.get(matchup_key, "")
+      if not inferred_time:
+        inferred_time = last_real_game_time or ""
+      if not inferred_time:
+        inferred_time = last_game_time or ""
+      row["gameTime"] = inferred_time or "TBD"
 
     current_team = row.get("team") or last_team or ""
     page_key = row.get("page", 0)
@@ -710,21 +705,6 @@ def normalize_rows(rows: list[Row], game_date: str) -> list[Row]:
     row["reason"] = reason
     row["gameDate"] = game_date
     normalized.append(row)
-
-  # Backfill pass: if a matchup has at least one concrete time, propagate it
-  # to rows still marked as TBD for that same matchup.
-  known_time_by_matchup = {}
-  for row in normalized:
-    matchup = normalize_matchup(row.get("matchup", ""))
-    game_time = normalize_game_time(row.get("gameTime", ""))
-    if matchup and not is_unknown_game_time(game_time):
-      known_time_by_matchup[matchup] = game_time
-  for row in normalized:
-    matchup = normalize_matchup(row.get("matchup", ""))
-    game_time = normalize_game_time(row.get("gameTime", ""))
-    if matchup and is_unknown_game_time(game_time) and matchup in known_time_by_matchup:
-      row["gameTime"] = known_time_by_matchup[matchup]
-      row["matchup"] = matchup
 
   return normalized
 
@@ -984,6 +964,76 @@ def build_stats(rows: list[Row]) -> dict[str, Any]:
   }
 
 
+def sort_rows_for_display(rows: list[Row]) -> list[Row]:
+  if not rows:
+    return []
+  status_rank = {status: idx for idx, status in enumerate(STATUS_DISPLAY_ORDER)}
+  team_block_order: dict[tuple[str, str], int] = {}
+  for idx, row in enumerate(rows):
+    team_key = (
+        (row.get("matchup") or "").strip().upper(),
+        (row.get("team") or "").strip().upper(),
+    )
+    team_block_order.setdefault(team_key, idx)
+  return sorted(
+      rows,
+      key=lambda row: (
+          team_block_order.get(
+              (
+                  (row.get("matchup") or "").strip().upper(),
+                  (row.get("team") or "").strip().upper(),
+              ),
+              10**9,
+          ),
+          status_rank.get((row.get("status") or "").strip(), len(STATUS_DISPLAY_ORDER)),
+          (row.get("player") or "").strip().upper(),
+      ),
+  )
+
+
+def filter_rows(
+    rows: list[Row],
+    player_query: str | None,
+    selected_teams: list[str] | None,
+    selected_statuses: list[str] | None,
+) -> list[Row]:
+  if not rows:
+    return []
+  query = (player_query or "").strip().lower()
+  team_set = {team.strip() for team in (selected_teams or []) if team and team.strip()}
+  status_set = {status.strip() for status in (selected_statuses or []) if status and status.strip()}
+  filtered: list[Row] = []
+  for row in rows:
+    player = (row.get("player") or "").strip()
+    team = (row.get("team") or "").strip()
+    status = (row.get("status") or "").strip()
+    if query and query not in player.lower():
+      continue
+    if team_set and team not in team_set:
+      continue
+    if status_set and status not in status_set:
+      continue
+    filtered.append(row)
+  return filtered
+
+
+def status_filter_color(status: str) -> str:
+  normalized = (status or "").strip().lower()
+  if normalized == "available":
+    return "#2f7a1f"
+  if normalized == "probable":
+    return "#275ea6"
+  if normalized == "questionable":
+    return "#a57500"
+  if normalized == "doubtful":
+    return "#8e4c25"
+  if normalized == "not with team":
+    return "#583689"
+  if normalized == "out":
+    return "#ad3416"
+  return "#857866"
+
+
 def rows_to_dataframe(rows: list[Row]) -> pd.DataFrame:
   df = pd.DataFrame(rows)
   if df.empty:
@@ -1009,16 +1059,14 @@ def rows_to_dataframe(rows: list[Row]) -> pd.DataFrame:
 def fetch_injury_report() -> Payload:
   CACHE_LOGGER.info("Fetch injury report using bs4 link extraction.")
   session = requests.Session()
-  html_response = fetch_with_retry(OFFICIAL_PAGE, timeout=12, retries=3, session=session)
-  links = extract_pdf_links(html_response.text)
-  if not links:
+  latest = fetch_latest_pdf_link(session=session)
+  if not latest:
     CACHE_LOGGER.warning("No PDF links found.")
     return {
         "ok": False,
         "error": "No PDF found on official page.",
         "step": "parse_links"
     }
-  latest = prefer_link(links)
   CACHE_LOGGER.info("Latest PDF selected: %s", latest)
   try:
     pdf_response = fetch_pdf_with_retry(latest, session=session, timeout=20, retries=3)
@@ -1081,12 +1129,17 @@ def fetch_injury_report() -> Payload:
   csv_path = os.path.join(DATA_DIR, csv_name)
   csv_df.to_csv(csv_path, index=False)
   CACHE_LOGGER.info("CSV saved to %s", csv_path)
+  published_timestamp = parse_pdf_datetime(latest)
+  published_at = ""
+  if published_timestamp:
+    published_at = datetime.utcfromtimestamp(published_timestamp).isoformat() + "Z"
   return {
       "ok": True,
       "meta": {
           "pdfUrl": latest,
           "pdfName": latest.split("/")[-1],
-          "publishedAt": datetime.utcfromtimestamp(parse_pdf_datetime(latest)).isoformat() + "Z",
+          "publishedAt": published_at,
+          "reportTime": parse_pdf_time_label(latest),
           "pdfPath": pdf_path,
           "csvPath": csv_path
       },
@@ -1097,29 +1150,37 @@ def fetch_injury_report() -> Payload:
 
 def get_cached_report(force: bool = False) -> Payload:
   now = time.time()
+  cached_payload: Payload | None = None
+  cache_fresh = False
   with CACHE_LOCK:
     if not force and CACHE_STATE["data"] and (now - CACHE_STATE["last_updated"] < CACHE_TTL_SECONDS):
-      CACHE_LOGGER.info("Serving cached report.")
-      return CACHE_STATE["data"]
-
-  with REFRESH_LOCK:
-    now = time.time()
+      cached_payload = CACHE_STATE["data"]
+      cache_fresh = True
+  if cached_payload and cache_fresh:
+    cached_url = cached_payload.get("meta", {}).get("pdfUrl", "")
+    cached_ts = parse_pdf_datetime(cached_url)
+    try:
+      latest_url = fetch_latest_pdf_link()
+      latest_ts = parse_pdf_datetime(latest_url or "")
+      if latest_url and latest_ts > cached_ts:
+        CACHE_LOGGER.info("Newer PDF detected (%s). Refreshing cache.", latest_url)
+      else:
+        CACHE_LOGGER.info("Serving cached report.")
+        return cached_payload
+    except Exception as exc:  # noqa: BLE001
+      CACHE_LOGGER.warning("Could not verify newer PDF, serving cached report: %s", exc)
+      return cached_payload
+  if force:
+    CACHE_LOGGER.info("Force refresh requested.")
+  else:
+    CACHE_LOGGER.info("Cache expired or empty. Refreshing.")
+  payload = fetch_injury_report()
+  if payload.get("ok"):
     with CACHE_LOCK:
-      if not force and CACHE_STATE["data"] and (now - CACHE_STATE["last_updated"] < CACHE_TTL_SECONDS):
-        CACHE_LOGGER.info("Serving cached report after refresh lock check.")
-        return CACHE_STATE["data"]
-
-    if force:
-      CACHE_LOGGER.info("Force refresh requested.")
-    else:
-      CACHE_LOGGER.info("Cache expired or empty. Refreshing.")
-    payload = fetch_injury_report()
-    if payload.get("ok"):
-      with CACHE_LOCK:
-        CACHE_STATE["data"] = payload
-        CACHE_STATE["last_updated"] = time.time()
-        CACHE_LOGGER.info("Cache updated.")
-    return payload
+      CACHE_STATE["data"] = payload
+      CACHE_STATE["last_updated"] = now
+      CACHE_LOGGER.info("Cache updated.")
+  return payload
 
 
 def start_scheduler() -> None:
@@ -1147,7 +1208,9 @@ def start_scheduler() -> None:
 def render_status_cards(stats: dict[str, Any]) -> Any:
   by_status = stats.get("byStatus", {})
   entries = list(by_status.items())
-  entries.sort(key=lambda x: STATUS_ORDER.index(x[0]) if x[0] in STATUS_ORDER else len(STATUS_ORDER))
+  entries.sort(
+      key=lambda x: STATUS_DISPLAY_ORDER.index(x[0]) if x[0] in STATUS_DISPLAY_ORDER else len(STATUS_DISPLAY_ORDER)
+  )
   if not entries:
     return html.Div("No data available.", className="muted")
   return [
@@ -1198,6 +1261,7 @@ def render_table_rows(rows: list[Row], loading: bool = False) -> Any:
           )
       )
     team_children.append(html.Span(team_name, className="team-name"))
+
     player_name = row.get("player", "")
     player_src = player_headshot_src(player_name)
     player_children = []
@@ -1210,17 +1274,30 @@ def render_table_rows(rows: list[Row], loading: bool = False) -> Any:
           )
       )
     player_children.append(html.Span(player_name, className="player-name"))
+
     status = row.get("status") or "Unknown"
     status_class = f"status-pill status-{status.lower().replace(' ', '-')}"
     row_divs.append(
         html.Div(
             [
-                html.Span(row.get("gameTime", "")),
-                html.Span(row.get("matchup", "")),
-                html.Span(team_children, className="team-cell"),
-                html.Span(player_children, className="player-cell"),
+                html.Span(
+                    row.get("gameTime", ""),
+                    className="cell-game-time",
+                    title=row.get("gameTime", ""),
+                ),
+                html.Span(
+                    row.get("matchup", ""),
+                    className="cell-matchup",
+                    title=row.get("matchup", ""),
+                ),
+                html.Span(team_children, className="team-cell", title=team_name),
+                html.Span(player_children, className="player-cell", title=player_name),
                 html.Span(status, className=status_class),
-                html.Span(row.get("reason", "")),
+                html.Span(
+                    row.get("reason", ""),
+                    className="cell-reason",
+                    title=row.get("reason", ""),
+                ),
             ],
             className="table-row",
             key=f"{row.get('player', '')}-{index}",
@@ -1250,6 +1327,7 @@ app.layout = html.Div(
                                 html.Div(
                                     [
                                         html.Span(id="pdf-name", children="Official PDF"),
+                                        html.Span(id="report-time"),
                                         html.Span(id="local-updated"),
                                     ],
                                     className="meta",
@@ -1298,12 +1376,6 @@ app.layout = html.Div(
                                         html.A("Open PDF", href="#", id="pdf-link", target="_blank"),
                                     ]
                                 ),
-                                html.Div(
-                                    [
-                                        html.Span("Timestamp", className="label"),
-                                        html.Span(id="pdf-timestamp"),
-                                    ]
-                                ),
                             ],
                             className="source-meta",
                         ),
@@ -1312,6 +1384,41 @@ app.layout = html.Div(
                 ),
             ],
             className="grid",
+        ),
+        html.Section(
+            [
+                html.Div(
+                    [
+                        html.H3("Filters"),
+                        html.Div(
+                            [
+                                dcc.Input(
+                                    id="player-search",
+                                    type="text",
+                                    placeholder="Search player...",
+                                    className="filter-input",
+                                ),
+                                dcc.Dropdown(
+                                    id="team-filter",
+                                    options=[],
+                                    multi=True,
+                                    placeholder="Filter by team",
+                                    className="filter-dropdown",
+                                ),
+                                dcc.Dropdown(
+                                    id="availability-filter",
+                                    options=[],
+                                    multi=True,
+                                    placeholder="Filter by availability",
+                                    className="filter-dropdown",
+                                ),
+                            ],
+                            className="filter-grid",
+                        ),
+                    ],
+                    className="panel",
+                ),
+            ]
         ),
         html.Section(
             [
@@ -1356,7 +1463,7 @@ app.layout = html.Div(
 )
 def load_report(n_clicks: int | None) -> tuple[Any, Any, str]:
   try:
-    force_refresh = bool(n_clicks)
+    force_refresh = n_clicks is not None
     payload = get_cached_report(force=force_refresh)
     if not payload.get("ok"):
       error_msg = payload.get("error", "Unknown error.")
@@ -1368,41 +1475,101 @@ def load_report(n_clicks: int | None) -> tuple[Any, Any, str]:
 
 
 @app.callback(
+    Output("team-filter", "options"),
+    Output("availability-filter", "options"),
+    Input("report-store", "data"),
+)
+def populate_filter_options(data: Payload | None) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+  if not data:
+    return [], []
+  rows = data.get("rows", [])
+  teams = sorted({(row.get("team") or "").strip() for row in rows if (row.get("team") or "").strip()})
+  statuses = {(row.get("status") or "").strip() for row in rows if (row.get("status") or "").strip()}
+  statuses_sorted = sorted(
+      statuses,
+      key=lambda value: STATUS_DISPLAY_ORDER.index(value) if value in STATUS_DISPLAY_ORDER else len(STATUS_DISPLAY_ORDER),
+  )
+  team_options = []
+  for team in teams:
+    logo_src = team_logo_src(team)
+    label_children: list[Any] = []
+    if logo_src:
+      label_children.append(html.Img(src=logo_src, className="dropdown-team-logo", alt=f"{team} logo"))
+    label_children.append(html.Span(team, className="dropdown-team-name"))
+    team_options.append(
+        {
+            "label": html.Span(label_children, className="dropdown-team-option"),
+            "value": team,
+            "search": team,
+        }
+    )
+  status_options = []
+  for status in statuses_sorted:
+    status_options.append(
+        {
+            "label": html.Span(
+                [
+                    html.Span("●", className="dropdown-status-dot", style={"color": status_filter_color(status)}),
+                    html.Span(status, className="dropdown-status-name"),
+                ],
+                className="dropdown-status-option",
+            ),
+            "value": status,
+            "search": status,
+        }
+    )
+  return team_options, status_options
+
+
+@app.callback(
     Output("pdf-name", "children"),
+    Output("report-time", "children"),
     Output("pdf-link", "href"),
-    Output("pdf-timestamp", "children"),
     Output("total-players", "children"),
     Output("total-teams", "children"),
     Output("status-grid", "children"),
     Output("table-body", "children"),
     Output("row-count", "children"),
     Input("report-store", "data"),
+    Input("player-search", "value"),
+    Input("team-filter", "value"),
+    Input("availability-filter", "value"),
 )
-def render_report(data: Payload | None) -> tuple[Any, ...]:
+def render_report(
+    data: Payload | None,
+    player_search: str | None,
+    selected_teams: list[str] | None,
+    selected_statuses: list[str] | None,
+) -> tuple[Any, ...]:
   if not data:
     return (
         "Official PDF",
+        "",
         "#",
-        "--",
         "--",
         "--",
         html.Div("No data available.", className="muted"),
         render_table_rows([], loading=True),
         "--",
     )
-  stats = data.get("stats", {})
-  rows = data.get("rows", [])
-  total_players = str(stats.get("totalRows", "--"))
+  raw_rows = data.get("rows", [])
+  filtered_rows = filter_rows(raw_rows, player_search, selected_teams, selected_statuses)
+  rows = sort_rows_for_display(filtered_rows)
+  stats = build_stats(rows)
+  total_players = str(len(rows))
   total_teams = str(len(stats.get("byTeam", {})))
+  row_count_label = f"{len(rows)} rows"
+  if len(rows) != len(raw_rows):
+    row_count_label = f"{len(rows)} rows (filtered from {len(raw_rows)})"
   return (
       data.get("meta", {}).get("pdfName", "Official PDF"),
+      f"Report time: {data.get('meta', {}).get('reportTime', '--')}" if data.get("meta", {}).get("reportTime") else "Report time: --",
       data.get("meta", {}).get("pdfUrl", "#"),
-      data.get("meta", {}).get("publishedAt", "--"),
       total_players,
       total_teams,
       render_status_cards(stats),
       render_table_rows(rows),
-      f"{len(rows)} rows",
+      row_count_label,
   )
 
 

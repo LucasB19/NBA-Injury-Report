@@ -15,6 +15,25 @@ SPDX-License-Identifier: MIT
 - Exposes the data in a Dash web dashboard.
 - Writes normalized CSV files to `data/`.
 
+## Pipeline Flow
+
+```mermaid
+flowchart TD
+  A[official.nba.com injury report page] --> B[Find latest Injury-Report_*.pdf link]
+  B --> C[Download PDF]
+  C --> D[Extract rows from text/tables/columns]
+  D --> E[Normalize + deduplicate rows]
+  E --> F[Write CSV to data/]
+  E --> G[Build dashboard payload]
+  G --> H[Dash UI: status cards + live table]
+
+  I[scripts/assets/sync_nba_assets.py] --> J[Team logos -> assets/team_logos/]
+  I --> K[Player headshots + map -> assets/player_headshots/]
+
+  F --> L[validate_injury_report_csv.py]
+  L --> M[PASS/FAIL quality checks]
+```
+
 ## Project layout
 
 - `injury_report_dashboard.py`: main production module (scraping, parsing, dashboard).

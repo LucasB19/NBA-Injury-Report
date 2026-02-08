@@ -52,11 +52,59 @@ gameDate,team,player,status,reason,page
 02/08/2026,Boston Celtics,"Hauser, Sam",Out,Injury/Illness - Low Back; Spasms,4
 02/08/2026,Boston Celtics,"Shulga, Max",Out,G League - Two-Way,4
 02/08/2026,Boston Celtics,"Tatum, Jayson",Out,Injury/Illness - Right Achilles; Repair,4
+02/08/2026,Detroit Pistons,"Duren, Jalen",Probable,Injury/Illness - Right Knee; Soreness,4
+02/08/2026,Detroit Pistons,"Holland II, Ronald",Out,Personal Reasons,4
+02/08/2026,Detroit Pistons,"Klintman, Bobi",Out,G League - On Assignment,4
+02/08/2026,Detroit Pistons,"Lanier, Chaz",Out,G League - On Assignment,4
+02/08/2026,Detroit Pistons,"Moore Jr., Wendell",Out,G League - Two-Way,4
+02/08/2026,Detroit Pistons,"Saric, Dario",Out,Not With Team,4
+02/08/2026,Detroit Pistons,"Smith, Tolu",Out,G League - Two-Way,4
+02/08/2026,Charlotte Hornets,"Branham, Malaki",Out,Not With Team,4
+02/08/2026,Charlotte Hornets,"Hall, PJ",Out,G League - Two-Way,4
+02/08/2026,Charlotte Hornets,"McNeeley, Liam",Out,G League - On Assignment,4
+02/08/2026,Charlotte Hornets,"Reeves, Antonio",Out,G League - Two-Way,4
+02/08/2026,Charlotte Hornets,"White, Coby",Out,Injury/Illness - Left Calf; Strain,4
 02/08/2026,Chicago Bulls,"Collins, Zach",Out,Injury/Illness - Right 1st Toe; Sprain,4
 02/08/2026,Chicago Bulls,"Essengue, Noa",Out,Injury/Illness - Left Shoulder; Surgery,4
 02/08/2026,Chicago Bulls,"Giddey, Josh",Doubtful,Injury/Illness - Left Hamstring; Strain,4
 02/08/2026,Chicago Bulls,"Jones, Tre",Doubtful,Injury/Illness - Left Hamstring; Strain,4
-02/08/2026,Chicago Bulls,"Kawamura, Yuki",Out,G League - Two-Way,4
-02/08/2026,Chicago Bulls,"McClung, Mac",Out,G League - Two-Way,4
-02/08/2026,Chicago Bulls,"Smith, Jalen",Questionable,Injury/Illness - Right Calf; Strain,4
-02/08/2026,Los Angeles Lakers,"Ayton, Deandre",Available,Injury/Illness - Right Knee; Soreness,5
+02/08/2026,Chicago Bulls,"Kawamura, Yuki",Out,G League - Two-Way,5
+02/08/2026,Chicago Bulls,"McClung, Mac",Out,G League - Two-Way,5
+02/08/2026,Chicago Bulls,"Smith, Jalen",Questionable,Injury/Illness - Right Calf; Strain,5
+02/08/2026,Brooklyn Nets,"Demin, Egor",Out,Rest,5
+02/08/2026,Brooklyn Nets,"Etienne, Tyson",Out,G League - Two-Way,5
+02/08/2026,Brooklyn Nets,"Johnson, Chaney",Out,G League - Two-Way,5
+02/08/2026,Brooklyn Nets,"Liddell, E.J.",Out,G League - Two-Way,5
+02/08/2026,Brooklyn Nets,"Porter Jr., Michael",Out,Injury/Illness - Right Knee; Tendinitis,5
+02/08/2026,Milwaukee Bucks,"Antetokounmpo, Alex",Out,G League - Two-Way,5
+02/08/2026,Milwaukee Bucks,"Antetokounmpo, Giannis",Out,Injury/Illness - Right Calf; Strain,5
+02/08/2026,Milwaukee Bucks,"Prince, Taurean",Out,Injury/Illness - Neck; Surgery,5
+02/08/2026,Orlando Magic,"Castleton, Colin",Out,G League - Two-Way,5
+02/08/2026,Orlando Magic,"Wagner, Franz",Questionable,Injury/Illness - Left High Ankle; Sprain management,5
+02/08/2026,Utah Jazz,"George, Keyonte",Out,Injury/Illness - Right Ankle; Sprain,5
+02/08/2026,Utah Jazz,"Kessler, Walker",Out,Injury/Illness - Left Shoulder; Injury Recovery,5
+02/08/2026,Atlanta Hawks,"Daniels, Dyson",Questionable,Inflammation,5
+02/08/2026,Atlanta Hawks,"Dennis, RayJ",Doubtful,G League - Two-Way,5
+02/08/2026,Atlanta Hawks,"Djurisic, Nikola",Doubtful,G League - On Assignment,6
+02/08/2026,Atlanta Hawks,"Houstan, Caleb",Doubtful,G League - Two-Way,6
+02/08/2026,Atlanta Hawks,"Kuminga, Jonathan",Out,Injury/Illness - Left Knee; Bone Bruise,6
+02/08/2026,Atlanta Hawks,"Okongwu, Onyeka",Available,Injury/Illness - N/A; Face Mask,6
+02/08/2026,Sacramento Kings,"Hunter, De'Andre",Out,Injury/Illness - Left Eye; Iritis,6
+02/08/2026,Sacramento Kings,"LaVine, Zach",Out,Injury/Illness - Right 5th Finger Soreness,6
+02/08/2026,Sacramento Kings,"McDermott, Doug",Questionable,Injury/Illness - Right Shoulder Soreness,6
+02/08/2026,Sacramento Kings,"Monk, Malik",Out,Injury/Illness - N/a; Illness,6
+02/08/2026,Sacramento Kings,"Murray, Keegan",Out,Injury/Illness - Left Ankle; Sprain,6
+02/08/2026,Sacramento Kings,"Sabonis, Domantas",Questionable,Injury/Illness - Lower Back Inflammation,6
+02/08/2026,Sacramento Kings,"Stevens, Isaiah",Out,G League - Two-Way,6
+02/08/2026,New Orleans Pelicans,"Alexander, Trey",Out,G League - Two-Way,6
+02/08/2026,New Orleans Pelicans,"Dickinson, Hunter",Out,G League - Two-Way,6
+02/08/2026,New Orleans Pelicans,"Murray, Dejounte",Out,Injury/Illness - Right Achilles; Rupture,6
+02/08/2026,Denver Nuggets,"Bates, Tamar",Out,Injury/Illness - Left Foot; Surgery,6
+02/08/2026,Denver Nuggets,"Braun, Christian",Probable,Injury/Illness - Left Ankle; Sprain,6
+02/08/2026,Denver Nuggets,"Gordon, Aaron",Out,Strain,7
+02/08/2026,Denver Nuggets,"Jokic, Nikola",Probable,Injury/Illness - Left Ankle; Sprain,7
+02/08/2026,Denver Nuggets,"Jones, Curtis",Out,G League - Two-Way,7
+02/08/2026,Denver Nuggets,"Jones, Spencer",Out,Concussion Protocol,7
+02/08/2026,Denver Nuggets,"Murray, Jamal",Questionable,Injury/Illness - Left Hip; Inflammation,7
+02/08/2026,Denver Nuggets,"Watson, Peyton",Out,Injury/Illness - Right Hamstring Strain,7
+02/08/2026,Los Angeles Lakers,"Ayton, Deandre",Available,Injury/Illness - Right Knee; Soreness,7
