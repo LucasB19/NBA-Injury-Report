@@ -1,0 +1,128 @@
+
+<!DOCTYPE html>
+<html>
+
+<head>
+    <link rel="icon" href="https://www.nba.com/assets/icons/favicon16.ico" type="image/x-icon">
+    <link rel="apple-touch-icon" href="https://www.nba.com/assets/icons/apple-touch-icon.png" type="image/png">
+    <title>The official site of the NBA | NBA.com</title>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        .main {
+            width: 100%;
+            height: 54px;
+            background-color: #1D428A;
+            margin: 0;
+            
+        }
+
+        .main img {
+            width: auto;
+            height: 34px;
+            margin: 11px 0px 10px 69px;
+        }
+
+
+        .pageError {
+            text-align: center;
+            font-family: Arial, Helvetica, sans-serif;
+            margin:44px 15px 54px 15px;
+        }
+
+        .pageError h2 {
+            font-size: 26px;
+            font-weight: 400;
+            margin-bottom: 18px;
+            margin-top: 10px;
+        }
+
+
+
+        .p {
+            color: rgb(10, 10, 10);
+
+        }
+
+        .footer {
+            text-align: center;
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 9px;
+            font-weight: 400;
+            line-height: 1.6;
+            margin-bottom: 1rem;
+            margin-top: 10px;
+            text-rendering: optimizeLegibility;
+            
+
+        }
+
+            
+        .turner-logo {
+            margin-top: 10px;
+            max-width: 75px;
+            height: 13.29px;
+        }
+
+        .footer a {
+            color: #2199e8;
+            text-decoration: none;
+            line-height: inherit;
+            cursor: pointer;
+        }
+
+        .footer hr {
+            display: block;
+            border-color: #333;
+            unicode-bidi: isolate;
+            margin-block-start: 0.5em;
+            margin-block-end: 0.5em;
+            margin-inline-start: auto;
+            margin-inline-end: auto;
+            overflow: hidden;
+            border-style: inset;
+            border-width: 1px;
+            max-width: 100%;
+        }
+    </style>
+    <script src="https://raw.github.com/leizongmin/js-xss/master/dist/xss.js"></script>>
+</head>
+
+<body>
+    <section class="container">
+        <div class="main">
+            <a href="https://www.nba.com"><img class="nba-logo" alt="nba global logo" data-align="left" src="http://www.nba.com/themes/custom/league/assets/images/global-navigation/nav_logoman.svg"></a>
+        </div>
+        <div class="pageError">
+            <h2>We are unable to process your request at the moment</h2>
+            <p>If the problem persists, kindly perform a screen capture of this page and email to customer service at
+                <a href="https://contact.nba.com/contact-nba/">https://contact.nba.com/contact-nba/</a></p>
+            <p class="site-url"></p>
+            <p>Reference Number: 18.bb847b5c.1770580944.f2416c0</p>
+        </div>
+        <div class="nbafooter">
+            <div class="footer">
+                <hr>
+                <p>Copyright © <em class="placeholder">2018</em> NBA Media Ventures, LLC. All rights reserved.</p>
+                <p><a href="https://www.nba.com/news/privacy_policy.html">Privacy Policy</a> | <a href="https://www.nba.com/closed_captioning">Accessibility
+                        and Closed Caption</a> | <a href="https://www.nba.com/news/termsofuse">Terms of Use</a> | <a id="nba_cnsnt_trst"
+                        class="nbaAdChoices" href="https://www.nba.com/adchoices" target="_blank">Ad Choices</a></p>
+                <p>NBA.com is part of Turner Sports Digital, part of the Turner Sports &amp; Entertainment Digital
+                    Network.</p>
+            </div>
+        </div>
+    </section>
+    <script>
+        var element = document.getElementsByClassName('site-url')[0];
+        element.innerHTML = "URL: " + filterXSS(window.location.href);
+    </script>
+    
+    
+<script type="text/javascript"  src="/P8YXVB/6/a/I0KfeKqio52u/3tYSbza7muY37Q9X9u/AT9EIQ0C/QEpqHVU/nLkcB"></script></body>
+
+</html>
