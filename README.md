@@ -18,6 +18,7 @@ SPDX-License-Identifier: MIT
 ## Pipeline Flow
 
 ```mermaid
+%%{init: {'themeVariables': {'fontSize': '10px'}, 'flowchart': {'nodeSpacing': 30, 'rankSpacing': 36}} }%%
 flowchart TD
   A[NBA<br/>page] --> B[Latest<br/>PDF]
   B --> C[Get<br/>PDF]
