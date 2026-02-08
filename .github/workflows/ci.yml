@@ -1,4 +1,4 @@
-name: CI
+name: NBA Injury Report Validation Pipeline
 
 on:
   push:
