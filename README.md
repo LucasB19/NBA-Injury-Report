@@ -19,7 +19,7 @@ SPDX-License-Identifier: MIT
 
 ```mermaid
 flowchart TD
-  A[Injury-Report nba.com] --> B[Latest Injury-Report]
+  A[Injury-Report nba.com             ] --> B[Latest Injury-Report]
   B --> C[Download PDF]
   C --> D[Extract rows]
   D --> E[Normalize]
