@@ -52,15 +52,13 @@ flowchart TD
 1. Install Python dependencies:
 
 ```bash
-python3 -m venv .venv
-. .venv/bin/activate
-pip install -r requirements.txt
+uv sync
 ```
 
 2. Run the dashboard:
 
 ```bash
-python app.py
+uv run python app.py
 ```
 
 3. Open:
@@ -72,25 +70,25 @@ python app.py
 Validate latest CSV in `data/`:
 
 ```bash
-python validate_injury_report_csv.py
+uv run python validate_injury_report_csv.py
 ```
 
 Validate an explicit CSV:
 
 ```bash
-python validate_injury_report_csv.py data/Injury-Report_2026-02-07_06_00AM.csv
+uv run python validate_injury_report_csv.py data/Injury-Report_2026-02-07_06_00AM.csv
 ```
 
 Strict mode (warnings become errors):
 
 ```bash
-python validate_injury_report_csv.py --strict-warnings
+uv run python validate_injury_report_csv.py --strict-warnings
 ```
 
 ## Sync Player Headshots
 
 ```bash
-python scripts/assets/sync_player_headshots.py
+uv run python scripts/assets/sync_player_headshots.py
 ```
 
 Options:
@@ -102,18 +100,29 @@ Options:
 ## Sync Logos + Headshots
 
 ```bash
-python scripts/assets/sync_nba_assets.py
+uv run python scripts/assets/sync_nba_assets.py
 ```
 
 Examples:
 
-- Logos only: `python scripts/assets/sync_nba_assets.py --only logos --force-logos`
-- Players only: `python scripts/assets/sync_nba_assets.py --only players --players-source active-and-reports`
+- Logos only: `uv run python scripts/assets/sync_nba_assets.py --only logos --force-logos`
+- Players only: `uv run python scripts/assets/sync_nba_assets.py --only players --players-source active-and-reports`
 
 ## Run tests
 
 ```bash
-python -m unittest discover -s tests -p 'test_*.py'
+uv run python -m unittest discover -s tests -p 'test_*.py'
+```
+
+## Legacy fallback
+
+If you do not want `uv`, the previous flow still works:
+
+```bash
+python3 -m venv .venv
+. .venv/bin/activate
+pip install -r requirements.txt
+python app.py
 ```
 
 ## Notes for production deployment
