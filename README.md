@@ -65,7 +65,7 @@ python app.py
 
 3. Open:
 
-- `http://localhost:8050`
+- `http://localhost:8060`
 
 ## Validate extracted CSV quality
 
